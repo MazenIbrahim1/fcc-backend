@@ -27,46 +27,46 @@ app.get('/api/hello', function(req, res) {
   res.json({ greeting: 'hello API' });
 });
 
-app.post('/api/shorturl', function(req, res) {
-  const url = req.body.url;
-  if (!url) {
-    return res.status(400).json({ error: 'Invalid URL' });
-  }
+// URL Shortener POST
+app.post('/api/shorturl', (req, res) => {
+  const originalUrl = req.body.url;
 
-  let hostname;
+  // Validate URL format
+  let parsedUrl;
   try {
-    const parsedUrl = new URL(url);
-    hostname = parsedUrl.hostname;
-  } catch (e) {
-    return res.status(400).json({ error: 'Invalid URL' });
+    parsedUrl = new URL(originalUrl);
+    if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+      throw new Error('Invalid protocol');
+    }
+  } catch (err) {
+    return res.json({ error: 'invalid url' });
   }
 
-  // Verify hostname using dns
-  dns.lookup(hostname, (err) => {
+  // DNS lookup to verify hostname
+  dns.lookup(parsedUrl.hostname, (err) => {
     if (err) {
-      return res.status(400).json({ error: 'Invalid URL' });
-    } else {
-      // Check if URL already exists
-      for (const key in urlDatabase) {
-        if (urlDatabase[key] === url) {
-          return res.json({ original_url: url, short_url: key });
-        }
-      }
-      // If not, create a new short URL
-      const shortUrl = urlCounter++;
-      urlDatabase[shortUrl] = url;
-      return res.json({ original_url: url, short_url: shortUrl });
+      return res.json({ error: 'invalid url' });
     }
-  });  
+
+    const shortUrl = urlCounter++;
+    urlDatabase[shortUrl] = originalUrl;
+
+    return res.json({
+      original_url: originalUrl,
+      short_url: shortUrl
+    });
+  });
 });
 
-app.get('/api/shorturl/:shortUrl', function(req, res) {
-  const shortUrl = req.params.shortUrl;
+// URL Shortener GET (redirect)
+app.get('/api/shorturl/:short_url', (req, res) => {
+  const shortUrl = req.params.short_url;
   const originalUrl = urlDatabase[shortUrl];
+
   if (originalUrl) {
-    res.redirect(originalUrl);
+    return res.redirect(originalUrl);
   } else {
-    res.status(404).json({ error: 'No short URL found for the given input'});
+    return res.json({ error: 'No short URL found for the given input' });
   }
 });
 
