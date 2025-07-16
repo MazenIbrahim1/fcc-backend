@@ -74,11 +74,35 @@ app.get('/api/users/:_id/logs', (req, res) => {
   }
 
   const logs = user.exercises || [];
+
+  let { from, to, limit } = req.query;
+
+  let filteredLogs = logs;
+
+  if (from) {
+    const fromDate = new Date(from);
+    if (!isNaN(fromDate)) {
+      filteredLogs = filteredLogs.filter(exercise => new Date(exercise.date) >= fromDate);
+    }
+  }
+
+  if (to) {
+    const toDate = new Date(to);
+    if (!isNaN(toDate)) {
+      filteredLogs = filteredLogs.filter(exercise => new Date(exercise.date) <= toDate);
+    }
+  }
+
+  if (limit) {
+    limit = parseInt(limit);
+    filteredLogs = filteredLogs.slice(0, limit);
+  }
+
   res.json({
     _id: user._id,
     username: user.username,
-    count: logs.length,
-    log: logs
+    count: filteredLogs.length,
+    log: filteredLogs
   });
 });
 
